@@ -31,6 +31,14 @@ You can also run the executable directly from the checkout:
 ruby exe/codex-limitless --help
 ```
 
+## AGENTS.md
+
+Add this instruction to the `AGENTS.md` file to help prevent long Codex goals from hitting the five-hour limit. At the beginning of every round, `codex-limitless -a` checks the five-hour remaining percentage and waits for the reset only when the remaining percentage is at or below the configured threshold. If it waits, it refreshes the displayed percentage every minute on the same status line.
+
+```md
+- At the beginning of every round, run: "codex-limitless -a". Run it directly with no timeout wrapper. Wait for the command to finish before continuing the round. Ignore output.
+```
+
 ## Usage
 
 ```sh
@@ -89,14 +97,6 @@ Use a specific Codex CLI executable. Defaults to `codex`.
 `-p`, `--percentage PERCENT`
 
 Remaining percentage threshold for `--auto`. Defaults to `15`.
-
-## AGENTS.md
-
-Add this instruction to the user's `AGENTS.md` file to help prevent long Codex goals from hitting the five-hour limit. At the beginning of every round, `codex-limitless -a` checks the five-hour remaining percentage and waits for the reset only when the remaining percentage is at or below the configured threshold. If it waits, it refreshes the displayed percentage every minute on the same status line.
-
-```md
-- At the beginning of every round, run: "codex-limitless -a". Run it directly with no timeout wrapper. Wait for the command to finish before continuing the round. Ignore output.
-```
 
 ## Environment
 
