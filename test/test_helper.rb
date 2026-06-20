@@ -47,6 +47,16 @@ module CodexLimitlessTestSupport
     object.define_singleton_method(method_name, original)
   end
 
+  def with_auto_refresh_seconds(value)
+    original = CodexLimitless::CLI.const_get(:AUTO_REFRESH_SECONDS)
+    CodexLimitless::CLI.send(:remove_const, :AUTO_REFRESH_SECONDS)
+    CodexLimitless::CLI.const_set(:AUTO_REFRESH_SECONDS, value)
+    yield
+  ensure
+    CodexLimitless::CLI.send(:remove_const, :AUTO_REFRESH_SECONDS)
+    CodexLimitless::CLI.const_set(:AUTO_REFRESH_SECONDS, original)
+  end
+
   def five_hour_summary(remaining_percent: 15, resets_at_local: past_reset_text)
     {
       "limit_id" => "codex",
@@ -61,8 +71,8 @@ module CodexLimitlessTestSupport
     (Time.now - 1).strftime("%Y-%m-%d %I:%M:%S %p %Z")
   end
 
-  def future_reset_text
-    (Time.now + 1).strftime("%Y-%m-%d %I:%M:%S %p %Z")
+  def future_reset_text(seconds: 1)
+    (Time.now + seconds).strftime("%Y-%m-%d %I:%M:%S %p %Z")
   end
 end
 

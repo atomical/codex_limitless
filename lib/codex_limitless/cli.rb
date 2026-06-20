@@ -9,11 +9,13 @@ require_relative "../codex_limitless"
 module CodexLimitless
   class CLI
     DEFAULT_PERCENTAGE = 15
+    AUTO_REFRESH_SECONDS = 60
 
     def initialize(argv, out: $stdout, err: $stderr)
       @argv = argv.dup
       @out = out
       @err = err
+      @status_line_width = 0
     end
 
     def run
@@ -75,7 +77,7 @@ module CodexLimitless
           set_command(options, :wait)
         end
 
-        parser.on("-a", "--auto", "Wait only when five_hour.remaining_percent is at or below --percentage.") do
+        parser.on("-a", "--auto", "Wait when five_hour.remaining_percent is at or below --percentage; refresh every minute.") do
           set_command(options, :auto)
         end
 
@@ -125,8 +127,7 @@ module CodexLimitless
 
     def auto_wait_for_five_hour_reset(options)
       summary = fetch_summary(options)
-      remaining_percent = summary.dig("five_hour", "remaining_percent")
-      raise Error, "five_hour.remaining_percent is missing from the fetched limit JSON" if remaining_percent.nil?
+      remaining_percent = five_hour_remaining_percent(summary)
 
       threshold = options[:percentage]
       if remaining_percent.to_i > threshold
@@ -134,23 +135,58 @@ module CodexLimitless
         return
       end
 
-      @out.puts "Five-hour remaining is #{remaining_percent}%, at or below #{threshold}%; waiting."
-      wait_until_five_hour_reset(summary)
+      current_remaining_percent = remaining_percent
+      status_message = proc do |remaining, reset_text|
+        "Five-hour remaining is #{current_remaining_percent}%, reset at #{reset_text} " \
+          "(#{format_duration(remaining)} remaining)"
+      end
+
+      wait_until_five_hour_reset(
+        summary,
+        refresh_seconds: AUTO_REFRESH_SECONDS,
+        status_message: status_message
+      ) do
+        refreshed = fetch_summary(options)
+        current_remaining_percent = five_hour_remaining_percent(refreshed)
+        refreshed
+      end
     end
 
-    def wait_until_five_hour_reset(summary)
+    def wait_until_five_hour_reset(summary, refresh_seconds: nil, status_message: nil, &refresh_summary)
       reset_text = five_hour_reset_text(summary)
       reset_at = Time.parse(reset_text)
-      @out.puts "Waiting until five-hour reset at #{reset_text}."
+      next_refresh_at = refresh_summary ? Time.now + refresh_seconds : nil
+      @out.puts "Waiting until five-hour reset at #{reset_text}." unless status_message
+      print_status_line(status_message.call(seconds_until(reset_at), reset_text)) if status_message
 
       until Time.now >= reset_at
-        remaining = [(reset_at - Time.now).ceil, 0].max
-        print_wait_status(remaining) if tty?
+        if next_refresh_at && Time.now >= next_refresh_at
+          summary = refresh_summary.call
+          reset_text = five_hour_reset_text(summary)
+          reset_at = Time.parse(reset_text)
+          next_refresh_at = Time.now + refresh_seconds
+        end
+
+        remaining = seconds_until(reset_at)
+        if status_message
+          print_status_line(status_message.call(remaining, reset_text))
+        elsif tty?
+          print_wait_status(remaining)
+        end
+        break if Time.now >= reset_at
+
         sleep 1
       end
 
-      @out.puts if tty?
+      status_message ? finish_status_line : (@out.puts if tty?)
       @out.puts "Five-hour reset reached at #{Time.now.strftime("%Y-%m-%d %I:%M:%S %p %Z")}."
+    end
+
+    def five_hour_remaining_percent(summary)
+      remaining_percent = summary.dig("five_hour", "remaining_percent")
+      raise Error, "five_hour.remaining_percent is missing from the fetched limit JSON" if remaining_percent.nil?
+
+      remaining_percent
     end
 
     def five_hour_reset_text(summary)
@@ -167,6 +203,23 @@ module CodexLimitless
     def print_wait_status(remaining)
       @out.print "\r#{format_duration(remaining)} remaining"
       @out.flush
+    end
+
+    def print_status_line(message)
+      padding_width = [@status_line_width - message.length, 0].max
+      prefix = @status_line_width.zero? ? "" : "\r"
+      @out.print "#{prefix}#{message}#{" " * padding_width}"
+      @out.flush
+      @status_line_width = message.length
+    end
+
+    def finish_status_line
+      @out.puts
+      @status_line_width = 0
+    end
+
+    def seconds_until(time)
+      [(time - Time.now).ceil, 0].max
     end
 
     def format_duration(seconds)

@@ -82,8 +82,35 @@ module CodexLimitless
 
         assert_equal 0, status
         assert_empty err
-        assert_includes out, "Five-hour remaining is 15%, at or below 15%; waiting."
+        assert_includes out, "Five-hour remaining is 15%, reset at"
+        assert_includes out, "00:00:00 remaining"
         assert_includes out, "Five-hour reset reached"
+      end
+    end
+
+    def test_auto_refreshes_remaining_percent_every_minute_while_waiting
+      summaries = [
+        five_hour_summary(remaining_percent: 7, resets_at_local: future_reset_text(seconds: 60)),
+        five_hour_summary(remaining_percent: 6, resets_at_local: past_reset_text)
+      ]
+      call_count = 0
+      callback = proc do |**|
+        summary = summaries.fetch([call_count, summaries.length - 1].min)
+        call_count += 1
+        summary
+      end
+
+      with_auto_refresh_seconds(0) do
+        stub_limits_summary(callback: callback) do
+          status, out, err = run_cli(["--auto"])
+
+          assert_equal 0, status
+          assert_empty err
+          assert_equal 2, call_count
+          assert_match(/Five-hour remaining is 7%, reset at .*\rFive-hour remaining is 6%, reset at /, out)
+          refute_match(/Five-hour remaining is 7%, reset at .*\nFive-hour remaining is 6%, reset at /, out)
+          assert_includes out, "Five-hour reset reached"
+        end
       end
     end
 
@@ -93,7 +120,7 @@ module CodexLimitless
 
         assert_equal 0, status
         assert_empty err
-        assert_includes out, "Five-hour remaining is 20%, at or below 20%; waiting."
+        assert_includes out, "Five-hour remaining is 20%, reset at"
       end
     end
 
