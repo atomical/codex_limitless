@@ -8,6 +8,8 @@ require_relative "../codex_limitless"
 
 module CodexLimitless
   class CLI
+    DEFAULT_PERCENTAGE = 15
+
     def initialize(argv, out: $stdout, err: $stderr)
       @argv = argv.dup
       @out = out
@@ -18,7 +20,7 @@ module CodexLimitless
       options = {
         codex_bin: ENV.fetch("CODEX_BIN", "codex"),
         limit_id: ENV.fetch("CODEX_LIMIT_ID", "codex"),
-        percentage: 10,
+        percentage: DEFAULT_PERCENTAGE,
         command: nil
       }
       parser = option_parser(options)
@@ -54,7 +56,7 @@ module CodexLimitless
       {
         codex_bin: ENV.fetch("CODEX_BIN", "codex"),
         limit_id: ENV.fetch("CODEX_LIMIT_ID", "codex"),
-        percentage: 10,
+        percentage: DEFAULT_PERCENTAGE,
         command: nil
       }
     end
