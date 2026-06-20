@@ -6,14 +6,26 @@ It can print the current limit snapshot as JSON, wait until the five-hour usage 
 
 ## Installation
 
-Build and install the gem from this checkout:
+Install from RubyGems:
+
+```sh
+gem install codex_limitless
+```
+
+After installation, the `codex-limitless` executable should be available on your shell path:
+
+```sh
+codex-limitless --help
+```
+
+For development, build and install the gem from this checkout:
 
 ```sh
 gem build codex_limitless.gemspec
 gem install ./codex_limitless-0.1.0.gem
 ```
 
-You can also run the executable directly while developing:
+You can also run the executable directly from the checkout:
 
 ```sh
 ruby exe/codex-limitless --help
@@ -136,9 +148,12 @@ Example shape:
 Run basic checks:
 
 ```sh
+rake test
 ruby -c lib/codex_limitless.rb
 ruby -c lib/codex_limitless/limits.rb
 ruby -c lib/codex_limitless/cli.rb
 ruby -c exe/codex-limitless
 gem build codex_limitless.gemspec
 ```
+
+`rake test` runs the Minitest suite and enforces 100% line coverage for the gem files in `lib/`.
