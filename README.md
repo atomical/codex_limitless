@@ -22,7 +22,7 @@ For development, build and install the gem from this checkout:
 
 ```sh
 gem build codex_limitless.gemspec
-gem install ./codex_limitless-0.1.1.gem
+gem install ./codex_limitless-0.1.2.gem
 ```
 
 You can also run the executable directly from the checkout:
